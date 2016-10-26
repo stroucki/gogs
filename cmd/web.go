@@ -410,8 +410,8 @@ func runWeb(ctx *cli.Context) error {
 	m.Group("/repo", func() {
 		m.Get("/create", repo.Create)
 		m.Post("/create", bindIgnErr(auth.CreateRepoForm{}), repo.CreatePost)
-		m.Get("/migrate", repo.Migrate)
-		m.Post("/migrate", bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
+		m.Get("/migrate", adminReq, repo.Migrate)
+		m.Post("/migrate", adminReq, bindIgnErr(auth.MigrateRepoForm{}), repo.MigratePost)
 		m.Combo("/fork/:repoid").Get(repo.Fork).
 			Post(bindIgnErr(auth.CreateRepoForm{}), repo.ForkPost)
 	}, reqSignIn)
