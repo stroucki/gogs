@@ -10,21 +10,22 @@ import (
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/core"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/auth"
-	"github.com/gogits/gogs/modules/auth/ldap"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/auth"
+	"code.gitea.io/gitea/modules/auth/ldap"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
 )
 
 const (
-	AUTHS     base.TplName = "admin/auth/list"
-	AUTH_NEW  base.TplName = "admin/auth/new"
-	AUTH_EDIT base.TplName = "admin/auth/edit"
+	tplAuths    base.TplName = "admin/auth/list"
+	tplAuthNew  base.TplName = "admin/auth/new"
+	tplAuthEdit base.TplName = "admin/auth/edit"
 )
 
+// Authentications show authentication config page
 func Authentications(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.authentication")
 	ctx.Data["PageIsAdmin"] = true
@@ -38,7 +39,7 @@ func Authentications(ctx *context.Context) {
 	}
 
 	ctx.Data["Total"] = models.CountLoginSources()
-	ctx.HTML(200, AUTHS)
+	ctx.HTML(200, tplAuths)
 }
 
 type dropdownItem struct {
@@ -48,32 +49,33 @@ type dropdownItem struct {
 
 var (
 	authSources = []dropdownItem{
-		{models.LoginNames[models.LOGIN_LDAP], models.LOGIN_LDAP},
-		{models.LoginNames[models.LOGIN_DLDAP], models.LOGIN_DLDAP},
-		{models.LoginNames[models.LOGIN_SMTP], models.LOGIN_SMTP},
-		{models.LoginNames[models.LOGIN_PAM], models.LOGIN_PAM},
+		{models.LoginNames[models.LoginLDAP], models.LoginLDAP},
+		{models.LoginNames[models.LoginDLDAP], models.LoginDLDAP},
+		{models.LoginNames[models.LoginSMTP], models.LoginSMTP},
+		{models.LoginNames[models.LoginPAM], models.LoginPAM},
 	}
 	securityProtocols = []dropdownItem{
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED], ldap.SECURITY_PROTOCOL_UNENCRYPTED},
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_LDAPS], ldap.SECURITY_PROTOCOL_LDAPS},
-		{models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_START_TLS], ldap.SECURITY_PROTOCOL_START_TLS},
+		{models.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted], ldap.SecurityProtocolUnencrypted},
+		{models.SecurityProtocolNames[ldap.SecurityProtocolLDAPS], ldap.SecurityProtocolLDAPS},
+		{models.SecurityProtocolNames[ldap.SecurityProtocolStartTLS], ldap.SecurityProtocolStartTLS},
 	}
 )
 
+// NewAuthSource render adding a new auth source page
 func NewAuthSource(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminAuthentications"] = true
 
-	ctx.Data["type"] = models.LOGIN_LDAP
-	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LOGIN_LDAP]
-	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SECURITY_PROTOCOL_UNENCRYPTED]
+	ctx.Data["type"] = models.LoginLDAP
+	ctx.Data["CurrentTypeName"] = models.LoginNames[models.LoginLDAP]
+	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted]
 	ctx.Data["smtp_auth"] = "PLAIN"
 	ctx.Data["is_active"] = true
 	ctx.Data["AuthSources"] = authSources
 	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
-	ctx.HTML(200, AUTH_NEW)
+	ctx.HTML(200, tplAuthNew)
 }
 
 func parseLDAPConfig(form auth.AuthenticationForm) *models.LDAPConfig {
@@ -111,6 +113,7 @@ func parseSMTPConfig(form auth.AuthenticationForm) *models.SMTPConfig {
 	}
 }
 
+// NewAuthSourcePost response for adding an auth source
 func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.new")
 	ctx.Data["PageIsAdmin"] = true
@@ -125,13 +128,13 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	hasTLS := false
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
+	case models.LoginLDAP, models.LoginDLDAP:
 		config = parseLDAPConfig(form)
-		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SECURITY_PROTOCOL_UNENCRYPTED
-	case models.LOGIN_SMTP:
+		hasTLS = ldap.SecurityProtocol(form.SecurityProtocol) > ldap.SecurityProtocolUnencrypted
+	case models.LoginSMTP:
 		config = parseSMTPConfig(form)
 		hasTLS = true
-	case models.LOGIN_PAM:
+	case models.LoginPAM:
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
@@ -142,7 +145,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["HasTLS"] = hasTLS
 
 	if ctx.HasError() {
-		ctx.HTML(200, AUTH_NEW)
+		ctx.HTML(200, tplAuthNew)
 		return
 	}
 
@@ -154,7 +157,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	}); err != nil {
 		if models.IsErrLoginSourceAlreadyExist(err) {
 			ctx.Data["Err_Name"] = true
-			ctx.RenderWithErr(ctx.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), AUTH_NEW, form)
+			ctx.RenderWithErr(ctx.Tr("admin.auths.login_source_exist", err.(models.ErrLoginSourceAlreadyExist).Name), tplAuthNew, form)
 		} else {
 			ctx.Handle(500, "CreateSource", err)
 		}
@@ -167,6 +170,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/auths")
 }
 
+// EditAuthSource render editing auth source page
 func EditAuthSource(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
 	ctx.Data["PageIsAdmin"] = true
@@ -183,9 +187,10 @@ func EditAuthSource(ctx *context.Context) {
 	ctx.Data["Source"] = source
 	ctx.Data["HasTLS"] = source.HasTLS()
 
-	ctx.HTML(200, AUTH_EDIT)
+	ctx.HTML(200, tplAuthEdit)
 }
 
+// EditAuthSourcePost resposne for editing auth source
 func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["Title"] = ctx.Tr("admin.auths.edit")
 	ctx.Data["PageIsAdmin"] = true
@@ -202,17 +207,17 @@ func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["HasTLS"] = source.HasTLS()
 
 	if ctx.HasError() {
-		ctx.HTML(200, AUTH_EDIT)
+		ctx.HTML(200, tplAuthEdit)
 		return
 	}
 
 	var config core.Conversion
 	switch models.LoginType(form.Type) {
-	case models.LOGIN_LDAP, models.LOGIN_DLDAP:
+	case models.LoginLDAP, models.LoginDLDAP:
 		config = parseLDAPConfig(form)
-	case models.LOGIN_SMTP:
+	case models.LoginSMTP:
 		config = parseSMTPConfig(form)
-	case models.LOGIN_PAM:
+	case models.LoginPAM:
 		config = &models.PAMConfig{
 			ServiceName: form.PAMServiceName,
 		}
@@ -234,6 +239,7 @@ func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Redirect(setting.AppSubUrl + "/admin/auths/" + com.ToStr(form.ID))
 }
 
+// DeleteAuthSource response for deleting an auth source
 func DeleteAuthSource(ctx *context.Context) {
 	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
 	if err != nil {

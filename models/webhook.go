@@ -15,26 +15,30 @@ import (
 	"github.com/go-xorm/xorm"
 	gouuid "github.com/satori/go.uuid"
 
-	api "github.com/gogits/go-gogs-client"
+	api "code.gitea.io/sdk/gitea"
 
-	"github.com/gogits/gogs/modules/httplib"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/modules/sync"
+	"code.gitea.io/gitea/modules/httplib"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/modules/sync"
 )
 
+// HookQueue is a global queue of web hooks
 var HookQueue = sync.NewUniqueQueue(setting.Webhook.QueueLength)
 
+// HookContentType is the content type of a web hook
 type HookContentType int
 
 const (
-	JSON HookContentType = iota + 1
-	FORM
+	// ContentTypeJSON is a JSON payload for web hooks
+	ContentTypeJSON HookContentType = iota + 1
+	// ContentTypeForm is an url-encoded form payload for web hook
+	ContentTypeForm
 )
 
 var hookContentTypes = map[string]HookContentType{
-	"json": JSON,
-	"form": FORM,
+	"json": ContentTypeJSON,
+	"form": ContentTypeForm,
 }
 
 // ToHookContentType returns HookContentType by given name.
@@ -42,11 +46,12 @@ func ToHookContentType(name string) HookContentType {
 	return hookContentTypes[name]
 }
 
+// Name returns the name of a given web hook's content type
 func (t HookContentType) Name() string {
 	switch t {
-	case JSON:
+	case ContentTypeJSON:
 		return "json"
-	case FORM:
+	case ContentTypeForm:
 		return "form"
 	}
 	return ""
@@ -58,6 +63,7 @@ func IsValidHookContentType(name string) bool {
 	return ok
 }
 
+// HookEvents is a set of web hook events
 type HookEvents struct {
 	Create      bool `json:"create"`
 	Push        bool `json:"push"`
@@ -73,12 +79,14 @@ type HookEvent struct {
 	HookEvents `json:"events"`
 }
 
+// HookStatus is the status of a web hook
 type HookStatus int
 
+// Possible statuses of a web hook
 const (
-	HOOK_STATUS_NONE = iota
-	HOOK_STATUS_SUCCEED
-	HOOK_STATUS_FAILED
+	HookStatusNone = iota
+	HookStatusSucceed
+	HookStatusFail
 )
 
 // Webhook represents a web hook object.
@@ -103,15 +111,20 @@ type Webhook struct {
 	UpdatedUnix int64
 }
 
+// BeforeInsert will be invoked by XORM before inserting a record
+// representing this object
 func (w *Webhook) BeforeInsert() {
 	w.CreatedUnix = time.Now().Unix()
 	w.UpdatedUnix = w.CreatedUnix
 }
 
+// BeforeUpdate will be invoked by XORM before updating a record
+// representing this object
 func (w *Webhook) BeforeUpdate() {
 	w.UpdatedUnix = time.Now().Unix()
 }
 
+// AfterSet updates the webhook object upon setting a column
 func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
@@ -127,6 +140,7 @@ func (w *Webhook) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
+// GetSlackHook returns slack metadata
 func (w *Webhook) GetSlackHook() *SlackMeta {
 	s := &SlackMeta{}
 	if err := json.Unmarshal([]byte(w.Meta), s); err != nil {
@@ -165,6 +179,7 @@ func (w *Webhook) HasPullRequestEvent() bool {
 		(w.ChooseEvents && w.HookEvents.PullRequest)
 }
 
+// EventsArray returns an array of hook events
 func (w *Webhook) EventsArray() []string {
 	events := make([]string, 0, 3)
 	if w.HasCreateEvent() {
@@ -276,7 +291,10 @@ func GetWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 
 // GetActiveWebhooksByOrgID returns all active webhooks for an organization.
 func GetActiveWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
-	err = x.Where("org_id=?", orgID).And("is_active=?", true).Find(&ws)
+	err = x.
+		Where("org_id=?", orgID).
+		And("is_active=?", true).
+		Find(&ws)
 	return ws, err
 }
 
@@ -287,8 +305,10 @@ func GetActiveWebhooksByOrgID(orgID int64) (ws []*Webhook, err error) {
 //  \___|_  / \____/ \____/|__|_ \ |____|  (____  /____  >__|_ \
 //        \/                    \/              \/     \/     \/
 
+// HookTaskType is the type of an hook task
 type HookTaskType int
 
+// Types of hook tasks
 const (
 	GOGS HookTaskType = iota + 1
 	SLACK
@@ -304,6 +324,7 @@ func ToHookTaskType(name string) HookTaskType {
 	return hookTaskTypes[name]
 }
 
+// Name returns the name of an hook task type
 func (t HookTaskType) Name() string {
 	switch t {
 	case GOGS:
@@ -320,12 +341,14 @@ func IsValidHookTaskType(name string) bool {
 	return ok
 }
 
+// HookEventType is the type of an hook event
 type HookEventType string
 
+// Types of hook events
 const (
-	HOOK_EVENT_CREATE       HookEventType = "create"
-	HOOK_EVENT_PUSH         HookEventType = "push"
-	HOOK_EVENT_PULL_REQUEST HookEventType = "pull_request"
+	HookEventCreate      HookEventType = "create"
+	HookEventPush        HookEventType = "push"
+	HookEventPullRequest HookEventType = "pull_request"
 )
 
 // HookRequest represents hook task request information.
@@ -365,15 +388,18 @@ type HookTask struct {
 	ResponseInfo    *HookResponse `xorm:"-"`
 }
 
+// BeforeUpdate will be invoked by XORM before updating a record
+// representing this object
 func (t *HookTask) BeforeUpdate() {
 	if t.RequestInfo != nil {
-		t.RequestContent = t.MarshalJSON(t.RequestInfo)
+		t.RequestContent = t.simpleMarshalJSON(t.RequestInfo)
 	}
 	if t.ResponseInfo != nil {
-		t.ResponseContent = t.MarshalJSON(t.ResponseInfo)
+		t.ResponseContent = t.simpleMarshalJSON(t.ResponseInfo)
 	}
 }
 
+// AfterSet updates the webhook object upon setting a column
 func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 	var err error
 	switch colName {
@@ -402,7 +428,7 @@ func (t *HookTask) AfterSet(colName string, _ xorm.Cell) {
 	}
 }
 
-func (t *HookTask) MarshalJSON(v interface{}) string {
+func (t *HookTask) simpleMarshalJSON(v interface{}) string {
 	p, err := json.Marshal(v)
 	if err != nil {
 		log.Error(3, "Marshal [%d]: %v", t.ID, err)
@@ -413,7 +439,11 @@ func (t *HookTask) MarshalJSON(v interface{}) string {
 // HookTasks returns a list of hook tasks by given conditions.
 func HookTasks(hookID int64, page int) ([]*HookTask, error) {
 	tasks := make([]*HookTask, 0, setting.Webhook.PagingNum)
-	return tasks, x.Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).Where("hook_id=?", hookID).Desc("id").Find(&tasks)
+	return tasks, x.
+		Limit(setting.Webhook.PagingNum, (page-1)*setting.Webhook.PagingNum).
+		Where("hook_id=?", hookID).
+		Desc("id").
+		Find(&tasks)
 }
 
 // CreateHookTask creates a new hook task,
@@ -459,15 +489,15 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	var payloader api.Payloader
 	for _, w := range ws {
 		switch event {
-		case HOOK_EVENT_CREATE:
+		case HookEventCreate:
 			if !w.HasCreateEvent() {
 				continue
 			}
-		case HOOK_EVENT_PUSH:
+		case HookEventPush:
 			if !w.HasPushEvent() {
 				continue
 			}
-		case HOOK_EVENT_PULL_REQUEST:
+		case HookEventPullRequest:
 			if !w.HasPullRequestEvent() {
 				continue
 			}
@@ -511,9 +541,9 @@ func (t *HookTask) deliver() {
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify})
 
 	switch t.ContentType {
-	case JSON:
+	case ContentTypeJSON:
 		req = req.Header("Content-Type", "application/json").Body(t.PayloadContent)
-	case FORM:
+	case ContentTypeForm:
 		req.Param("payload", t.PayloadContent)
 	}
 
@@ -544,9 +574,9 @@ func (t *HookTask) deliver() {
 			return
 		}
 		if t.IsSucceed {
-			w.LastStatus = HOOK_STATUS_SUCCEED
+			w.LastStatus = HookStatusSucceed
 		} else {
-			w.LastStatus = HOOK_STATUS_FAILED
+			w.LastStatus = HookStatusFail
 		}
 		if err = UpdateWebhook(w); err != nil {
 			log.Error(5, "UpdateWebhook: %v", err)
@@ -580,13 +610,15 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	x.Where("is_delivered=?", false).Iterate(new(HookTask),
-		func(idx int, bean interface{}) error {
-			t := bean.(*HookTask)
-			t.deliver()
-			tasks = append(tasks, t)
-			return nil
-		})
+	x.
+		Where("is_delivered=?", false).
+		Iterate(new(HookTask),
+			func(idx int, bean interface{}) error {
+				t := bean.(*HookTask)
+				t.deliver()
+				tasks = append(tasks, t)
+				return nil
+			})
 
 	// Update hook task status.
 	for _, t := range tasks {
@@ -615,6 +647,7 @@ func DeliverHooks() {
 	}
 }
 
+// InitDeliverHooks starts the hooks delivery thread
 func InitDeliverHooks() {
 	go DeliverHooks()
 }

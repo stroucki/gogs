@@ -5,18 +5,19 @@
 package admin
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/routers"
 )
 
 const (
-	REPOS base.TplName = "admin/repo/list"
+	tplRepos base.TplName = "admin/repo/list"
 )
 
+// Repos show all the repositories
 func Repos(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.repositories")
 	ctx.Data["PageIsAdmin"] = true
@@ -27,11 +28,12 @@ func Repos(ctx *context.Context) {
 		Ranger:   models.Repositories,
 		Private:  true,
 		PageSize: setting.UI.Admin.RepoPagingNum,
-		OrderBy:  "id ASC",
-		TplName:  REPOS,
+		OrderBy:  "owner_id ASC, name ASC, id ASC",
+		TplName:  tplRepos,
 	})
 }
 
+// DeleteRepo delete one repository
 func DeleteRepo(ctx *context.Context) {
 	repo, err := models.GetRepositoryByID(ctx.QueryInt64("id"))
 	if err != nil {

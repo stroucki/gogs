@@ -5,28 +5,29 @@
 package admin
 
 import (
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/setting"
-	"github.com/gogits/gogs/routers"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/routers"
 )
 
 const (
-	ORGS base.TplName = "admin/org/list"
+	tplOrgs base.TplName = "admin/org/list"
 )
 
+// Organizations show all the organizations
 func Organizations(ctx *context.Context) {
 	ctx.Data["Title"] = ctx.Tr("admin.organizations")
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminOrganizations"] = true
 
 	routers.RenderUserSearch(ctx, &routers.UserSearchOptions{
-		Type:     models.USER_TYPE_ORGANIZATION,
+		Type:     models.UserTypeOrganization,
 		Counter:  models.CountOrganizations,
 		Ranger:   models.Organizations,
 		PageSize: setting.UI.Admin.OrgPagingNum,
 		OrderBy:  "id ASC",
-		TplName:  ORGS,
+		TplName:  tplOrgs,
 	})
 }

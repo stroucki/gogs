@@ -7,18 +7,21 @@ package org
 import (
 	"github.com/Unknwon/com"
 
-	"github.com/gogits/gogs/models"
-	"github.com/gogits/gogs/modules/base"
-	"github.com/gogits/gogs/modules/context"
-	"github.com/gogits/gogs/modules/log"
-	"github.com/gogits/gogs/modules/setting"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/base"
+	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/setting"
 )
 
 const (
-	MEMBERS       base.TplName = "org/member/members"
-	MEMBER_INVITE base.TplName = "org/member/invite"
+	// tplMembers template for organization members page
+	tplMembers base.TplName = "org/member/members"
+	// tplMemberInvite template for orgnization invite page
+	tplMemberInvite base.TplName = "org/member/invite"
 )
 
+// Members render orgnization users page
 func Members(ctx *context.Context) {
 	org := ctx.Org.Organization
 	ctx.Data["Title"] = org.FullName
@@ -30,9 +33,10 @@ func Members(ctx *context.Context) {
 	}
 	ctx.Data["Members"] = org.Members
 
-	ctx.HTML(200, MEMBERS)
+	ctx.HTML(200, tplMembers)
 }
 
+// MembersAction response for operation to a member of orgnization
 func MembersAction(ctx *context.Context) {
 	uid := com.StrTo(ctx.Query("uid")).MustInt64()
 	if uid == 0 {
@@ -91,6 +95,7 @@ func MembersAction(ctx *context.Context) {
 	}
 }
 
+// Invitation render organization invitation page
 func Invitation(ctx *context.Context) {
 	org := ctx.Org.Organization
 	ctx.Data["Title"] = org.FullName
@@ -119,5 +124,5 @@ func Invitation(ctx *context.Context) {
 		return
 	}
 
-	ctx.HTML(200, MEMBER_INVITE)
+	ctx.HTML(200, tplMemberInvite)
 }
