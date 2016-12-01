@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+       	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+       	<title>{{.Subject}}</title>
+</head>
+
+<body>
+       	<p>Repository: <code>{{.RepoName}}</code></p>
+{{range .Commits}}
+       	<p>Message: {{.Message}}</p>
+        <p>SHA1: {{.Sha1}}</p>
+        <p></p>
+{{end}}
+
+       	<p>
+       		---
+       		<br>
+       		<a href="{{.CompareURL}}">View it on Gogs</a>.
+       	</p>
+</body>
+</html>

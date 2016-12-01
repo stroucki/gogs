@@ -172,6 +172,50 @@ func (a *Action) GetIssueContent() string {
 	return issue.Content
 }
 
+// MailParticipants sends mail to watchers of the repository
+func (act *Action) MailParticipants(doer *User) (err error) {
+
+        if err = mailCommitToParticipants(act, doer); err != nil {
+                log.Error(4, "mailCommitToParticipants: %v", err)
+        }
+
+        return nil
+}
+
+// mailCommitToParticipants lets watchers know about a commit
+func mailCommitToParticipants(act *Action, doer *User) error {
+        if !setting.Service.EnableNotifyMail {
+                return nil
+        }
+
+        // Mail watchers.
+        watchers, err := GetWatchers(act.RepoID)
+        if err != nil {
+                return fmt.Errorf("GetWatchers [%d]: %v", act.RepoID, err)
+        }
+
+        tos := make([]string, 0, len(watchers)) // List of email addresses.
+        for i := range watchers {
+                // exclude the doer
+                if watchers[i].UserID == doer.ID {
+                        continue
+                }
+
+                to, err := GetUserByID(watchers[i].UserID)
+                if err != nil {
+                        return fmt.Errorf("GetUserByID [%d]: %v", watchers[i].UserID, err)
+                }
+                if to.IsOrganization() {
+                        continue
+                }
+
+                tos = append(tos, to.Email)
+        }
+        SendCommitMail(act, doer, tos)
+
+        return nil
+}
+
 func newRepoAction(e Engine, u *User, repo *Repository) (err error) {
 	if err = notifyWatchers(e, &Action{
 		ActUserID:    u.ID,
@@ -482,7 +526,7 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	}
 
 	refName := git.RefEndName(opts.RefFullName)
-	if err = NotifyWatchers(&Action{
+        act := &Action{
 		ActUserID:    pusher.ID,
 		ActUserName:  pusher.Name,
 		OpType:       opType,
@@ -492,8 +536,15 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		RepoName:     repo.Name,
 		RefName:      refName,
 		IsPrivate:    repo.IsPrivate,
-	}); err != nil {
+	}
+
+	if err = NotifyWatchers(act); err != nil {
 		return fmt.Errorf("NotifyWatchers: %v", err)
+	}
+
+        // commit notification
+	if err = act.MailParticipants(pusher); err != nil {
+		return fmt.Errorf("MailParticipants: %v", err)
 	}
 
 	defer func() {
