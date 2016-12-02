@@ -42,6 +42,7 @@ func NewGitLogger(logPath string) {
 	os.MkdirAll(path.Dir(logPath), os.ModePerm)
 	GitLogger = newLogger(0)
 	GitLogger.SetLogger("file", fmt.Sprintf(`{"level":0,"filename":"%s","rotate":false}`, logPath))
+	loggers = append(loggers, GitLogger)
 }
 
 func Trace(format string, v ...interface{}) {
