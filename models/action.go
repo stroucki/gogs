@@ -174,9 +174,8 @@ func (a *Action) GetIssueContent() string {
 
 // MailParticipants sends mail to watchers of the repository
 func (act *Action) MailParticipants(doer *User) (err error) {
-
         if err = mailCommitToParticipants(act, doer); err != nil {
-                log.Error(4, "mailCommitToParticipants: %v", err)
+                return fmt.Errorf("mailCommitToParticipants: %v", err)
         }
 
         return nil
