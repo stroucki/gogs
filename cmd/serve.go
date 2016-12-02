@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -22,7 +23,9 @@ import (
 	"github.com/gogits/gogs/modules/base"
 	"github.com/gogits/gogs/modules/httplib"
 	"github.com/gogits/gogs/modules/log"
+	"github.com/gogits/gogs/modules/mailer"
 	"github.com/gogits/gogs/modules/setting"
+	"github.com/gogits/gogs/modules/template"
 )
 
 const (
@@ -41,6 +44,12 @@ var CmdServ = cli.Command{
 
 func setup(logPath string) {
 	setting.NewContext()
+	setting.NewServices()
+	mailer.NewContext()
+
+	funcMap := template.NewFuncMap()
+	models.InitMailRender(path.Join(setting.StaticRootPath, "templates/mail"),
+                path.Join(setting.CustomPath, "templates/mail"), funcMap)
 	log.NewGitLogger(filepath.Join(setting.LogRootPath, logPath))
 
 	models.LoadConfigs()
