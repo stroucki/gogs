@@ -5,6 +5,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"path"
@@ -28,6 +29,7 @@ const (
 	MAIL_ISSUE_COMMENT base.TplName = "issue/comment"
 	MAIL_ISSUE_MENTION base.TplName = "issue/mention"
 
+	MAIL_COMMIT base.TplName = "notify/commit"
 	MAIL_NOTIFY_COLLABORATOR base.TplName = "notify/collaborator"
 )
 
@@ -141,6 +143,39 @@ func SendCollaboratorMail(u, doer *User, repo *Repository) {
 	msg.Info = fmt.Sprintf("UID: %d, add collaborator", u.ID)
 
 	mailer.SendAsync(msg)
+}
+
+// SendCommitMail sends mail notification on commit
+func SendCommitMail(act *Action, doer *User, tos []string) {
+        if len(tos) == 0 {
+                return
+        }
+        mailer.SendAsync(composeCommitMessage(act, doer, MAIL_COMMIT, tos, "commit"))
+}
+
+func composeCommitMessage(act *Action, doer *User, tplName base.TplName, tos []string, info string) *mailer.Message {
+        repoName := path.Join(act.RepoUserName, act.RepoName)
+        subject := fmt.Sprintf("%s committed to %s", doer.DisplayName(), repoName)
+
+        push := NewPushCommits()
+        if err := json.Unmarshal([]byte(act.Content), push); err != nil {
+                log.Error(4, "json.Unmarshal:\n%s\nERROR: %v", act.Content, err)
+        }
+
+        data := map[string]interface{}{
+                "Subject":  subject,
+                "RepoName": repoName,
+                "Commits": push.Commits,
+                "CompareURL": setting.AppUrl +push.CompareURL,
+        }
+        body, err := mailRender.HTMLString(string(tplName), data)
+        if err != nil {
+                log.Error(3, "HTMLString: %v", err)
+        }
+
+        msg := mailer.NewMessage(tos, subject, body)
+        msg.Info = fmt.Sprintf("commit by %s", doer.DisplayName())
+	return msg
 }
 
 func composeTplData(subject, body, link string) map[string]interface{} {

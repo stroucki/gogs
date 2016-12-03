@@ -281,7 +281,7 @@ func execPath() (string, error) {
 
 func init() {
 	IsWindows = runtime.GOOS == "windows"
-	log.NewLogger(0, "console", `{"level": 0}`)
+	//log.NewLogger(0, "console", `{"level": 0}`)
 
 	var err error
 	if AppPath, err = execPath(); err != nil {
