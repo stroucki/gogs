@@ -416,8 +416,8 @@ func runWeb(c *cli.Context) error {
 		m.Group("/repo", func() {
 			m.Get("/create", repo.Create)
 			m.Post("/create", bindIgnErr(form.CreateRepo{}), repo.CreatePost)
-			m.Get("/migrate", repo.Migrate)
-			m.Post("/migrate", bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
+			m.Get("/migrate", reqAdmin, repo.Migrate)
+			m.Post("/migrate", reqAdmin, bindIgnErr(form.MigrateRepo{}), repo.MigratePost)
 			m.Combo("/fork/:repoid").Get(repo.Fork).
 				Post(bindIgnErr(form.CreateRepo{}), repo.ForkPost)
 		}, reqSignIn)
