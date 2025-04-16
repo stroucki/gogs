@@ -30,6 +30,7 @@ const (
 	MAIL_ISSUE_MENTION = "issue/mention"
 
 	MAIL_NOTIFY_COLLABORATOR = "notify/collaborator"
+	MAIL_NOTIFY_COMMIT       = "notify/commit"
 )
 
 var (
@@ -192,6 +193,25 @@ func composeTplData(subject, body, link string) map[string]any {
 	data["Body"] = body
 	data["Link"] = link
 	return data
+}
+
+// SendCommitMessage composes and sends commit messages to target receivers.
+func SendCommitMessage(data map[string]any, doer User, tos []string) {
+	if len(tos) == 0 {
+		return
+	}
+
+	Send(composeCommitMessage(data, doer, MAIL_NOTIFY_COMMIT, tos, "commit"))
+}
+
+func composeCommitMessage(data map[string]any, doer User, tplName string, tos []string, info string) *Message {
+	body, err := render(tplName, data)
+	if err != nil {
+		log.Error("HTMLString (%s): %v", tplName, err)
+	}
+	msg := NewMessage(tos, data["Subject"].(string), body)
+	msg.Info = fmt.Sprintf("Subject: commit by %s", doer.DisplayName())
+	return msg
 }
 
 func composeIssueMessage(issue Issue, repo Repository, doer User, tplName string, tos []string, info string) *Message {
