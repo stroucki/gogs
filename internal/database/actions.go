@@ -17,6 +17,7 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
+	"gogs.io/gogs/internal/email"
 	"gogs.io/gogs/internal/lazyregexp"
 	"gogs.io/gogs/internal/repoutil"
 	"gogs.io/gogs/internal/strutil"
@@ -819,6 +820,65 @@ func (a *Action) GetIssueContent() string {
 		return "error getting issue"
 	}
 	return issue.Content
+}
+
+func (act *Action) MailParticipants(doer *User) (err error) {
+	if err = mailCommitToParticipants(act, doer); err != nil {
+		return fmt.Errorf("mailCommitToParticipants: %v", err)
+	}
+	return nil
+}
+
+func mailCommitToParticipants(act *Action, doer *User) error {
+	if !conf.User.EnableEmailNotification {
+		return nil
+	}
+
+	// Mail watchers
+	watchers, err := GetWatchers(act.RepoID)
+	if err != nil {
+		return fmt.Errorf("GetWatchers [%d]: %v", act.RepoID, err)
+	}
+	tos := make([]string, 0, len(watchers))
+	for i := range watchers {
+		// exclude the doer
+		if watchers[i].UserID == doer.ID {
+			continue
+		}
+
+		to, err := Users.GetByID(context.TODO(), watchers[i].UserID)
+		if err != nil {
+			return fmt.Errorf("Users.GetById [%d]: %v", watchers[i].UserID, err)
+		}
+
+		if to.IsOrganization() {
+			continue
+		}
+
+		tos = append(tos, to.Email)
+	}
+
+	SendCommitMail(act, doer, tos)
+	return nil
+}
+
+func SendCommitMail(act *Action, doer *User, tos []string) {
+	if len(tos) == 0 {
+		return
+	}
+	repoName := path.Join(act.RepoUserName, act.RepoName)
+	subject := fmt.Sprintf("%s committed to %s", doer.DisplayName(), repoName)
+	push := NewPushCommits()
+	if err := jsoniter.Unmarshal([]byte(act.GetContent()), push); err != nil {
+		log.Error("Unmarshal:\n%s\nERROR: %v", act.GetContent(), err)
+	}
+	data := map[string]any{
+		"Subject":    subject,
+		"RepoName":   repoName,
+		"Commits":    push.Commits,
+		"CompareURL": push.CompareURL,
+	}
+	email.SendCommitMessage(data, mailerUser{doer}, tos)
 }
 
 // PushCommit contains information of a pushed commit.
