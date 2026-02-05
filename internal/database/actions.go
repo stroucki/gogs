@@ -594,6 +594,9 @@ func (s *ActionsStore) CommitRepo(ctx context.Context, opts CommitRepoOptions) e
 	if err != nil {
 		return errors.Wrap(err, "notify watchers")
 	}
+	if err = action.mailParticipants(pusher); err != nil {
+		return fmt.Errorf("mailParticipants: %v", err)
+	}
 	return nil
 }
 
@@ -822,7 +825,7 @@ func (a *Action) GetIssueContent() string {
 	return issue.Content
 }
 
-func (act *Action) MailParticipants(doer *User) (err error) {
+func (act *Action) mailParticipants(doer *User) (err error) {
 	if err = mailCommitToParticipants(act, doer); err != nil {
 		return fmt.Errorf("mailCommitToParticipants: %v", err)
 	}
@@ -846,7 +849,7 @@ func mailCommitToParticipants(act *Action, doer *User) error {
 			continue
 		}
 
-		to, err := Users.GetByID(context.TODO(), watchers[i].UserID)
+		to, err := Handle.Users().GetByID(context.TODO(), watchers[i].UserID)
 		if err != nil {
 			return fmt.Errorf("Users.GetById [%d]: %v", watchers[i].UserID, err)
 		}
@@ -876,7 +879,7 @@ func SendCommitMail(act *Action, doer *User, tos []string) {
 		"Subject":    subject,
 		"RepoName":   repoName,
 		"Commits":    push.Commits,
-		"CompareURL": push.CompareURL,
+		"CompareURL": conf.Server.ExternalURL + push.CompareURL,
 	}
 	email.SendCommitMessage(data, mailerUser{doer}, tos)
 }
