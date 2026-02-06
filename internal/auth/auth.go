@@ -19,6 +19,7 @@ const (
 	PAM         // 4
 	DLDAP       // 5
 	GitHub      // 6
+	OIDC        // 7
 
 	Mock Type = 999
 )
@@ -31,6 +32,7 @@ func Name(typ Type) string {
 		SMTP:   "SMTP",
 		PAM:    "PAM",
 		GitHub: "GitHub",
+		OIDC:   "OIDC",
 	}[typ]
 }
 
@@ -71,6 +73,8 @@ type ExternalAccount struct {
 	Website string
 	// Whether the user should be prompted as a site admin.
 	Admin bool
+	// The URL of the account avatar/profile picture.
+	AvatarURL string
 }
 
 // Provider defines an authenticate provider which provides ability to authentication against
