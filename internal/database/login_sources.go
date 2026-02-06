@@ -13,6 +13,7 @@ import (
 	"gogs.io/gogs/internal/auth"
 	"gogs.io/gogs/internal/auth/github"
 	"gogs.io/gogs/internal/auth/ldap"
+	"gogs.io/gogs/internal/auth/oidc"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
 	"gogs.io/gogs/internal/errutil"
@@ -110,6 +111,14 @@ func (s *LoginSource) AfterFind(_ *gorm.DB) error {
 		}
 		s.Provider = github.NewProvider(&cfg)
 
+	case auth.OIDC:
+		var cfg oidc.Config
+		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
+		if err != nil {
+			return err
+		}
+		s.Provider = oidc.NewProvider(&cfg)
+
 	case auth.Mock:
 		var cfg mockProviderConfig
 		err := jsoniter.UnmarshalFromString(s.Config, &cfg)
@@ -150,6 +159,10 @@ func (s *LoginSource) IsGitHub() bool {
 	return s.Type == auth.GitHub
 }
 
+func (s *LoginSource) IsOIDC() bool {
+	return s.Type == auth.OIDC
+}
+
 func (s *LoginSource) LDAP() *ldap.Config {
 	return s.Provider.Config().(*ldap.Config)
 }
@@ -164,6 +177,10 @@ func (s *LoginSource) PAM() *pam.Config {
 
 func (s *LoginSource) GitHub() *github.Config {
 	return s.Provider.Config().(*github.Config)
+}
+
+func (s *LoginSource) OIDC() *oidc.Config {
+	return s.Provider.Config().(*oidc.Config)
 }
 
 // LoginSourcesStore is the storage layer for login sources.
