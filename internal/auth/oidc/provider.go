@@ -24,7 +24,7 @@ func NewProvider(cfg *Config) auth.Provider {
 
 // Authenticate performs authentication against OIDC provider.
 // For OIDC, this method is not used for direct login but for validation.
-func (p *Provider) Authenticate(login, password string) (*auth.ExternalAccount, error) {
+func (_ *Provider) Authenticate(_ string, _ string) (*auth.ExternalAccount, error) {
 	// OIDC authentication is handled via OAuth2 flow, not username/password
 	return nil, fmt.Errorf("OIDC authentication requires OAuth2 flow")
 }
@@ -110,11 +110,11 @@ func (p *Provider) Config() any {
 	return p.config
 }
 
-func (p *Provider) HasTLS() bool {
+func (_ *Provider) HasTLS() bool {
 	return true
 }
 
-func (p *Provider) UseTLS() bool {
+func (_ *Provider) UseTLS() bool {
 	return true
 }
 
