@@ -203,7 +203,7 @@ func importOIDCAvatar(c *context.Context, userID int64, avatarURL string) error 
 	}
 
 	// Create request with proper headers
-	req, err := http.NewRequest("GET", avatarURL, nil)
+	req, err := http.NewRequest("GET", avatarURL, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
