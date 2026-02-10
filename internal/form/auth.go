@@ -42,6 +42,7 @@ type Authentication struct {
 	OIDCIssuerURL       string `form:"oidc_issuer_url" binding:"Required;Url"`
 	OIDCClientID        string `form:"oidc_client_id" binding:"Required"`
 	OIDCClientSecret    string `form:"oidc_client_secret" binding:"Required"`
+	OIDCRedirectURL     string `form:"oidc_redirect_url"`
 	OIDCScopes          string `form:"oidc_scopes"`
 	OIDCAutoRegister    bool   `form:"oidc_auto_register"`
 	OIDCAdminGroup      string `form:"oidc_admin_group"`

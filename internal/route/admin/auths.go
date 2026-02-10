@@ -121,6 +121,7 @@ func parseOIDCConfig(f form.Authentication) *oidc.Config {
 		IssuerURL:       f.OIDCIssuerURL,
 		ClientID:        f.OIDCClientID,
 		ClientSecret:    f.OIDCClientSecret,
+		RedirectURL:     f.OIDCRedirectURL,
 		Scopes:          f.OIDCScopes,
 		AutoRegister:    f.OIDCAutoRegister,
 		SkipVerify:      f.SkipVerify,
