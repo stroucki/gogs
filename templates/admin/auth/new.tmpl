@@ -179,6 +179,10 @@
 								<input id="oidc_client_secret" name="oidc_client_secret" type="password" value="{{.oidc_client_secret}}" />
 							</div>
 							<div class="field">
+								<label for="oidc_redirect_url">{{.i18n.Tr "admin.auths.oidc_redirect_url"}}</label>
+								<input id="oidc_redirect_url" name="oidc_redirect_url" value="{{.oidc_redirect_url}}" />
+							</div>
+							<div class="field">
 								<label for="oidc_scopes">{{.i18n.Tr "admin.auths.oidc_scopes"}}</label>
 								<input id="oidc_scopes" name="oidc_scopes" value="{{.oidc_scopes}}" placeholder="openid profile email" />
 							</div>
