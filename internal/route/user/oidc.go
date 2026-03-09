@@ -16,7 +16,6 @@ import (
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
 	"gogs.io/gogs/internal/tool"
-	"gogs.io/gogs/internal/urlutil"
 )
 
 // OIDCLogin starts the OIDC login flow
@@ -176,13 +175,8 @@ func OIDCCallback(c *context.Context) {
 	}
 
 	// Handle redirect
-	redirectTo, _ := url.QueryUnescape(c.GetCookie("redirect_to"))
-	if urlutil.IsSameSite(redirectTo) {
-		c.Redirect(redirectTo)
-	} else {
-		c.RedirectSubpath("/")
-	}
-	c.SetCookie("redirect_to", "", -1, conf.Server.Subpath)
+	// XXXstroucki already handled by afterLogin
+
 }
 
 // importOIDCAvatar downloads the avatar from the given URL and saves it as the user's custom avatar.
