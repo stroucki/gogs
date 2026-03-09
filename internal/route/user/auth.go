@@ -198,6 +198,8 @@ func LoginPost(c *context.Context, f form.SignIn) {
 		case database.IsErrLoginSourceMismatch(err):
 			c.FormErr("LoginSource")
 			c.RenderWithErr(c.Tr("form.auth_source_mismatch"), http.StatusUnprocessableEntity, tmplUserAuthLogin, &f)
+			// XXXstroucki OIDC cannot authenticate with username/password, so will 500 here
+			// better way to deal with it?
 
 		default:
 			c.Error(err, "authenticate user")
