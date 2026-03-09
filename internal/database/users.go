@@ -90,7 +90,7 @@ func (s *UsersStore) Authenticate(ctx context.Context, login, password string, l
 		}
 
 		// Validate password hash fetched from database for local accounts.
-		if user.IsLocal() {
+		if user.IsLocal() && password != "" {
 			if userutil.ValidatePassword(user.Password, user.Salt, password) {
 				return user, nil
 			}
