@@ -846,9 +846,9 @@ func mailCommitToParticipants(act *Action, doer *User) error {
 			continue
 		}
 
-		to, err := Users.GetByID(context.TODO(), watchers[i].UserID)
+		to, err := Handle.Users().GetByID(context.TODO(), watchers[i].UserID)
 		if err != nil {
-			return fmt.Errorf("Users.GetById [%d]: %v", watchers[i].UserID, err)
+			return fmt.Errorf("Users.GetByID [%d]: %v", watchers[i].UserID, err)
 		}
 
 		if to.IsOrganization() {
