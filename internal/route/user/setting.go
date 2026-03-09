@@ -204,7 +204,7 @@ func SettingsPasswordPost(c *context.Context, f form.ChangePassword) {
 		return
 	}
 
-	if !userutil.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
+	if f.OldPassword == "" || !userutil.ValidatePassword(c.User.Password, c.User.Salt, f.OldPassword) {
 		c.Flash.Error(c.Tr("settings.password_incorrect"))
 	} else if f.Password != f.Retype {
 		c.Flash.Error(c.Tr("form.password_not_match"))
